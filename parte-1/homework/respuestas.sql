@@ -31,7 +31,7 @@ And subsubcategoria not in ('Soporte' , 'Control remoto')
 --9
 SELECT * FROM stg.order_line_sale
 where moneda = 'ARS'
-and venta + descuento + impuestos > 100000
+and venta + coalesce (descuento,0) + impuestos > 100000
 --10
 SELECT * FROM stg.order_line_sale
 where fecha between '2022-10-1' and '2022-10-31'
