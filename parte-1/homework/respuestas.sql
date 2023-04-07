@@ -47,7 +47,7 @@ where fecha between '2022-10-1' and '2022-11-10'
 --1
 select distinct pais from stg.store_master
 --2
-Select distinct count (codigo_producto),categoria from stg.product_master
+Select count (codigo_producto),categoria from stg.product_master
 group by categoria
 --3
 SELECT orden FROM stg.order_line_sale
@@ -62,8 +62,9 @@ select sum(impuestos) as totimp from stg.order_line_sale
 where moneda = 'EUR'
 and cast (fecha as text) like '2022%'
 --6
-Select count (creditos) as cantcred from stg.order_line_sale
+Select count (distinct orden) from stg.order_line_sale
 Where creditos is not null
+
 --7	
 select  tienda, round(SUM(descuento)/SUM(Venta)*100,2) as descotorg from stg.order_line_sale
 group by tienda
@@ -102,10 +103,10 @@ select  sum(venta) as venta, sum(impuestos) as impuestos, moneda, provincia, pai
 on o.tienda = m.codigo_tienda
 group by m.pais, m.provincia, o.moneda	
 --3
-select  sum(venta+descuento+impuestos) as ventatotal,subcategoria, moneda from stg.order_line_sale o left join stg.product_master m 
+select  sum(venta+coalesce(descuento,0)+impuestos) as ventatotal,subcategoria, moneda from stg.order_line_sale o left join stg.product_master m 
 on o.producto = m.codigo_producto
 group by moneda, subcategoria
-order by subcategoria, moneda
+
 --4
 select sum(cantidad) as sumcantidad, subcategoria, concat(pais,'-',provincia) as lugar from stg.order_line_sale o
 left join stg.product_master m 
