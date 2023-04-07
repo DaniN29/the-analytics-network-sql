@@ -91,3 +91,37 @@ group by producto,moneda
 14
 select orden, impuestos/venta*100 as tasa  from stg.order_line_sale
 
+-- Clase 3
+
+--1
+select nombre, codigo_producto, categoria,  coalesce (color,'unknown') as color  from stg.product_master
+where nombre like '%PHILIPS%' 
+or nombre like '%Samsung%'
+--2
+select  sum(venta) as venta, sum(impuestos) as impuestos, moneda, provincia, pais from stg.order_line_sale o left join stg.store_master m
+on o.tienda = m.codigo_tienda
+group by m.pais, m.provincia, o.moneda	
+--3
+select  sum(venta+descuento+impuestos) as ventatotal,subcategoria, moneda from stg.order_line_sale o left join stg.product_master m 
+on o.producto = m.codigo_producto
+group by moneda, subcategoria
+order by subcategoria, moneda
+--4
+select sum(cantidad) as sumcantidad, subcategoria, concat(pais,'-',provincia) as lugar from stg.order_line_sale o
+left join stg.product_master m 
+on o.producto = m.codigo_producto
+left join stg.store_master s
+on o.tienda = s.codigo_tienda
+group by subcategoria, lugar
+order by lugar
+--5
+select nombre, sum(coalesce(conteo,0)) as totconteo from stg.store_master m left join stg.super_store_count s
+on m.codigo_tienda = s.tienda
+group by m.nombre 
+-- no hay datos con fecha anterior a la fecha de apertura
+--6
+select nombre, sku, (avg(inicial) + avg(final))/2 as invprom , substring (cast(fecha as text), 1, 7) mes from stg.inventory i left join stg.store_master s
+on i.tienda = s.codigo_tienda
+group by s.nombre, mes, i.sku
+
+
