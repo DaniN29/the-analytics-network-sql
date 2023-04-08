@@ -124,5 +124,19 @@ group by m.nombre
 select nombre, sku, (avg(inicial) + avg(final))/2 as invprom , substring (cast(fecha as text), 1, 7) mes from stg.inventory i left join stg.store_master s
 on i.tienda = s.codigo_tienda
 group by s.nombre, mes, i.sku
+--7
+with stg_material as (
+select lower(coalesce (material, 'unknown')) materialhom, sum(cantidad) cantidad from stg.order_line_sale o left join stg.product_master p
+on o.producto = p.codigo_producto
+group by p.material)
+Select materialhom, Sum(cantidad)
+from stg_material
+group by materialhom
+ --8
+select  ols.*, case when moneda = 'EUR' then venta / cotizacion_usd_eur when moneda = 'ARS' then venta / cotizacion_usd_peso when moneda = 'URU' then venta / cotizacion_usd_uru else venta  end as ventausd
+from stg.order_line_sale as ols
+left join stg.monthly_average_fx_rate as mafr 
+on date_part('month',ols.fecha) = date_part('month',mafr.mes)  
+
 
 
