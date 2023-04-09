@@ -69,7 +69,7 @@ Where creditos is not null
 select  tienda, round(SUM(descuento)/SUM(Venta)*100,2) as descotorg from stg.order_line_sale
 group by tienda
 --8
-select avg(inicial+final)/2 from stg.inventory
+select tienda, avg((inicial+final)/2) from stg.inventory
 group by tienda
 --9
 select producto, sum(venta-coalesce(descuento,0)) as ventnet, sum(coalesce(descuento,0))*(-1)/sum(venta)*100 as porcdesc
@@ -137,6 +137,28 @@ select  ols.*, case when moneda = 'EUR' then venta / cotizacion_usd_eur when mon
 from stg.order_line_sale as ols
 left join stg.monthly_average_fx_rate as mafr 
 on date_part('month',ols.fecha) = date_part('month',mafr.mes)  
+--9
+with stg_ventasusd as (
+select  ols.*, case when moneda = 'EUR' then venta / cotizacion_usd_eur when moneda = 'ARS' then venta / cotizacion_usd_peso when moneda = 'URU' then venta / cotizacion_usd_uru else venta  end as ventausd
+from stg.order_line_sale as ols
+left join stg.monthly_average_fx_rate as mafr 
+on date_part('month',ols.fecha) = date_part('month',mafr.mes)  )
+Select sum (ventausd) from stg_ventasusd
+--10
+with stg_ventasusd as (
+select  ols.*, case when moneda = 'EUR' then venta-coalesce(descuento,0) / cotizacion_usd_eur when moneda = 'ARS' then venta-coalesce(descuento,0) / cotizacion_usd_peso when moneda = 'URU' then venta-coalesce(descuento,0) / cotizacion_usd_uru else venta-coalesce(descuento,0)  end as ventausd
+from stg.order_line_sale as ols
+left join stg.monthly_average_fx_rate as mafr 
+on date_part('month',ols.fecha) = date_part('month',mafr.mes)  )
+Select v.*, ventausd-coalesce(costo_promedio_usd,0) as margen from stg_ventasusd v
+left join stg.cost c
+on v.producto = c.codigo_producto
+--11
+select orden, subcategoria, count (distinct producto) from stg.order_line_sale o left join stg.product_master p
+ on o.producto = p.codigo_producto
+ group by orden, subcategoria
+
+
 
 
 
