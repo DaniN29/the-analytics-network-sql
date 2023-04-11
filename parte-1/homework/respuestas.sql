@@ -157,6 +157,60 @@ on v.producto = c.codigo_producto
 select orden, subcategoria, count (distinct producto) from stg.order_line_sale o left join stg.product_master p
  on o.producto = p.codigo_producto
  group by orden, subcategoria
+ 
+ -- Clase 4
+ 
+ --1
+
+create schema bkp;
+select * into bkp.product_master_09042023
+from stg.product_master
+--2
+Update bkp.product_master_09042023 set material = 'N/A' where material is null
+Update bkp.product_master_09042023 set color = 'N/A' where color is null
+--3
+Update bkp.product_master_09042023 set is_active = false where subsubcategoria = 
+'Control remoto'
+--4
+Alter table  bkp.product_master_09042023 add is_local boolean;
+update bkp.product_master_09042023 set is_local = true where origen = ‘Argentina’
+--5
+Alter table stg.order_line_sale add line_key varchar(255);
+update stg.order_line_sale set line_key = concat_ws ('-',orden,producto);
+--6
+delete from stg.order_line_sale where pos = 1;
+--7
+CREATE  TABLE stg.employees (
+                        id serial primary key,
+                        nombre VARCHAR,
+                        apellido VARCHAR,
+                        fecha_entrada DATE,
+                        fecha_salida DATE,
+                        telefono VARCHAR,
+                        pais VARCHAR,
+                        provincia VARCHAR,
+                        codigo_tienda INt,
+                        posicion VARCHAR);
+--8
+insert into stg.employees 
+                       ( nombre ,
+                        apellido,
+                        fecha_entrada ,
+                        fecha_salida ,
+                        telefono ,
+                        pais,
+                        provincia,
+                        codigo_tienda,
+                        posicion)
+						VALUES
+						('Juan', 'Perez', '2022-01-01',null,541113869867, 'Argentina', 'Santa Fe', 2, 'Vendedor');
+Luego lo corri también con VALUES						(‘Ana', 'Valdez', '2022-03-01','2022-03-01',null, 'Espania', 'Madrid', 8, 'Jefe Logistica'),('Catalina', 'Garcia', '2020-02-21',null,null, 'Argentina', 'Buenos Aires', 2, 'Representante Comercial'), ('Fernando', 'Moralez', '2022-04-04',null,null, 'Espania', 'Valencia', 9, 'Vendedor');
+--9
+select *,  -- selecciona todo desde la tabla stg.cost
+now() as last_updated_ts  -- agrega fecha y hora en la nueva columna last_updated_ts
+INTO bkp.cost_20231104
+FROM stg.cost
+
 
 
 
