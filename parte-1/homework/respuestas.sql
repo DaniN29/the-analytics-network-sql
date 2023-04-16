@@ -76,8 +76,7 @@ select producto, sum(venta-coalesce(descuento,0)) as ventnet, sum(coalesce(descu
 from stg.order_line_sale
 group by product
 --10
-select * from stg.market_count as latam  full outer join stg.super_store_count as europe
-on latam.tienda = europe.tienda
+select tienda, cast(fecha as varchar(10)),conteo from stg.market_count union all select tienda, cast(fecha as varchar(10)),conteo from stg.super_store_count
 --11
 select * from stg.product_master
 where nombre like '%PHILIPS%'
