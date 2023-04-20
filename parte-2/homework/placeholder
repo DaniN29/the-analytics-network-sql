@@ -1,1 +1,32 @@
+-- Clase 6 - ejercicios
+
+--1
+create or replace view stg.resultclas210 as
+----
+select tienda, cast(fecha as varchar(10)),conteo from stg.market_count union all select tienda, cast(fecha as varchar(10)),conteo from stg.super_store_count
+;
+--2
+Los 240 registros ingresados en super_store_count aparecen también en la vista creada en el ejercicio 1 que pasa de 397 a 637 registros. 
+En cambio si hubiese sido una tabla tendría que haberla regenerado. La ventaja en este caso de la vista es que lee los datos en forma dinámica de las otras dos tablas.
+--3
+Create or replace view stg.resultclas310 as
+-----
+with stg_ventasusd as (
+select  ols.*, case when moneda = 'EUR' then venta-coalesce(descuento,0) / cotizacion_usd_eur when moneda = 'ARS' then venta-coalesce(descuento,0) / cotizacion_usd_peso when moneda = 'URU' then venta-coalesce(descuento,0) / cotizacion_usd_uru else venta-coalesce(descuento,0)  end as ventausd
+from stg.order_line_sale as ols
+left join stg.monthly_average_fx_rate as mafr 
+on date_part('month',ols.fecha) = date_part('month',mafr.mes)  )
+Select v.venta, v.producto, v.descuento, v.creditos, c.costo_promedio_usd, ventausd-coalesce(costo_promedio_usd,0) as margen from stg_ventasusd v
+left join stg.cost c
+on v.producto = c.codigo_producto
+;
+--4
+Select line_key, count(1) 
+from stg.order_line_sale 
+group by line_key
+having count(1) > 1
+--5
+select sum (a.margen), b.subcategoria from stg.resultclas310 a left join stg.product_master b
+on a.producto = b.codigo_producto
+group by b.subcategoria
 
