@@ -29,4 +29,36 @@ having count(1) > 1
 select sum (a.margen), b.subcategoria from stg.resultclas310 a left join stg.product_master b
 on a.producto = b.codigo_producto
 group by b.subcategoria
+--6
+with stg_totalpororder as (
+select orden, sum(venta) s from stg.order_line_sale
+group by orden)
+Select a.*, t.s, round (venta/s,2) as contribucion from stg.order_line_sale a left join stg_totalpororder t 
+on a.orden = t.orden
+order by orden
+--7
+Create table stg.suppliers  (
+Producto Varchar (255),
+Nombre  Varchar  (255),
+is_primary boolean
+);
+--
+Create or replace view stg.resultclas310 as
+-----
+with stg_ventasusd as (
+select  ols.*, case when moneda = 'EUR' then venta-coalesce(descuento,0) / cotizacion_usd_eur when moneda = 'ARS' then venta-coalesce(descuento,0) / cotizacion_usd_peso when moneda = 'URU' then venta-coalesce(descuento,0) / cotizacion_usd_uru else venta-coalesce(descuento,0)  end as ventausd
+from stg.order_line_sale as ols
+left join stg.monthly_average_fx_rate as mafr 
+on date_part('month',ols.fecha) = date_part('month',mafr.mes)  )
+Select v.venta, v.producto, v.descuento, v.creditos, c.costo_promedio_usd, ventausd-coalesce(costo_promedio_usd,0) as margen, s.nombre from stg_ventasusd v
+left join stg.cost c
+on v.producto = c.codigo_producto
+left join stg.suppliers s
+on v.producto = s.producto
+where s.is_primary is true	
+;
+--8
+Algo que creo que aprendi con el ejercicio 7 es lo siguiente: Yo habia entendido que si hago un left join, no aumenta la cantidad de lineas, ya que completa las lineas del de la izquierda. Sin embargo note que al unir con suppliers pasaba de 40 a 54 lineas.  y esto parece ser porque hay mas de un proveedor para el mismo producto, es decir mi creencia sobre left join no era correcta. Entonces use el campo boolean para tomar solo los proveedores en true, y ahi volvi a 40.
+Entonces ya en el query del paso 7 solucione la duplicación.
+
 
