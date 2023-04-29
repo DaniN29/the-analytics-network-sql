@@ -61,4 +61,85 @@ where s.is_primary is true
 Algo que creo que aprendi con el ejercicio 7 es lo siguiente: Yo habia entendido que si hago un left join, no aumenta la cantidad de lineas, ya que completa las lineas del de la izquierda. Sin embargo note que al unir con suppliers pasaba de 40 a 54 lineas.  y esto parece ser porque hay mas de un proveedor para el mismo producto, es decir mi creencia sobre left join no era correcta. Entonces use el campo boolean para tomar solo los proveedores en true, y ahi volvi a 40.
 Entonces ya en el query del paso 7 solucione la duplicación.
 
+Clase 7
+
+--1
+with stg_porcentajes as (
+select 
+	sum(case when descuento is null then 1 else 0 end) descuentos_null,
+	sum(case when descuento is not null then 1 else 0 end) descuentos_lleno,
+	sum(case when creditos is null then 1 else 0 end) creditos_null,
+	sum(case when creditos is not null then 1 else 0 end) creditos_lleno
+from stg.order_line_sale
+)
+select descuentos_null,  descuentos_lleno, cast(descuentos_null as float)/cast((descuentos_null+descuentos_lleno) as float) as porcent_descuento, creditos_null,creditos_lleno, 
+cast(creditos_null as float)/cast((creditos_null+descuentos_lleno) as float) as porcent_creditos
+from stg_porcentajes
+--La division entre integers me daba cero, tuve que usar cast y float.
+--2
+--Hice primero el ejercicio 4 y agrege la tienda, orden e is_walkout a la vista
+with parteA as
+(
+select count (distinct orden) cantordwalk, sum(venta) ventaWalk, tienda   
+from stg.resultclas310 res
+where is_walkout = true
+group by tienda
+),
+ParteB as
+(
+select
+cast(sum (case when is_walkout is true then venta else 0 end) as float)/ cast(Sum (Venta) as float) porcwalk, tienda
+from stg.resultclas310 R
+group by tienda 
+)
+Select parteA.cantordwalk, ParteA.ventaWalk, ParteA.tienda, ParteB.porcwalk
+from parteA left join ParteB
+on ParteA.tienda = ParteB.tienda
+
+--3
+--identifico duplicados con Windows function
+with duplicados as (
+select
+	orden, 
+	producto, 
+	tienda,
+	fecha, 
+	cantidad,
+	   row_number() over(partition by orden, producto) as rn
+from stg.order_line_sale
+	)
+	select * from duplicados
+where rn > 1
+--Para evitar los duplicados, podríamos hacer este select con rn = 1, eso nos garantizaría evitar duplicados en el listado
+--4
+ --voy a trabajar con la vista creada que ya tiene ventas USD. Primero le agregare la tienda a la vista
+Create or replace view stg.resultclas310 as
+-----
+with stg_ventasusd as (
+select  ols.*, case when moneda = 'EUR' then venta-coalesce(descuento,0) / cotizacion_usd_eur when moneda = 'ARS' then venta-coalesce(descuento,0) / cotizacion_usd_peso when moneda = 'URU' then venta-coalesce(descuento,0) / cotizacion_usd_uru else venta-coalesce(descuento,0)  end as ventausd
+from stg.order_line_sale as ols
+left join stg.monthly_average_fx_rate as mafr 
+on date_part('month',ols.fecha) = date_part('month',mafr.mes)  )
+Select v.venta, v.producto, v.descuento, v.creditos, c.costo_promedio_usd, ventausd-coalesce(costo_promedio_usd,0) as margen, s.nombre, v.tienda, v.orden, v.is_walkout from stg_ventasusd v
+left join stg.cost c
+on v.producto = c.codigo_producto
+left join stg.suppliers s
+on v.producto = s.producto
+where s.is_primary is true	
+;
+--Ahora usare la vista para buscar el resultado
+with ventasinarg as (
+select r.producto, SUM (r.venta)  from stg.resultclas310  r left join stg.store_master s
+on r.tienda = s.codigo_tienda
+where s.pais <> 'Argentina'
+group by producto
+)
+Select v.*, p.categoria from ventasinarg v left join stg.product_master p
+on v.producto = p.codigo_producto
+where categoria <> 'TV'
+--Analisis de datos: La tabla de ventas tiene 40 lineas, pero solo 9 productos y son de categoría electro.
+
+
+
+
 
