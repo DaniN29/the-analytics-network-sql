@@ -138,6 +138,22 @@ Select v.*, p.categoria from ventasinarg v left join stg.product_master p
 on v.producto = p.codigo_producto
 where categoria <> 'TV'
 --Analisis de datos: La tabla de ventas tiene 40 lineas, pero solo 9 productos y son de categoría electro.
+--5
+with tablaA as
+(
+select sum(cantidad) total, fecha from stg.order_line_sale
+group by fecha
+order by fecha desc
+),
+TablaB as
+(
+select sum(cantidad) total, fecha from stg.order_line_sale
+group by fecha
+order by fecha desc
+)
+Select TablaA.total Cantidad, TablaA.fecha, TablaB.total SemanaAnt, TablaB.fecha, (TablaA.total - coalesce(TablaB.total,0)) diferencia  from tablaA left join tablaB
+on tablaB.fecha - tablaA.fecha = -7
+
 
 
 
