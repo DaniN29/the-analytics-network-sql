@@ -154,6 +154,65 @@ order by fecha desc
 Select TablaA.total Cantidad, TablaA.fecha, TablaB.total SemanaAnt, TablaB.fecha, (TablaA.total - coalesce(TablaB.total,0)) diferencia  from tablaA left join tablaB
 on tablaB.fecha - tablaA.fecha = -7
 
+Clase 8
+
+--1
+select distinct sum (a.margen) over (partition by b.subcategoria), b.subcategoria from stg.resultclas310 a
+left join stg.product_master b
+on a.producto = b.codigo_producto
+
+--2
+create or replace view stg.ejercicio2clas8 as
+with ventas_mes as (
+select
+    producto,
+    sum(round(ols.venta/(case 
+    when moneda = 'EUR' then mfx.cotizacion_usd_eur
+    when moneda = 'ARS' then mfx.cotizacion_usd_peso
+    when moneda = 'URU' then mfx.cotizacion_usd_uru
+    else 0 end),1)) as venta_bruta_usd
+from stg.order_line_sale ols
+left join stg.monthly_average_fx_rate mfx 
+	on extract(month from mfx.mes) = extract(month from ols.fecha) 
+	and extract(year from mfx.mes) = extract(year from ols.fecha) 
+    group by 1
+)
+
+select producto, venta_bruta_usd, sum(venta_bruta_usd) over (order by venta_bruta_usd desc) as venta_acumulada
+from ventas_mes
+;
+
+select producto, venta_bruta_usd, venta_acumulada, round(venta_acumulada / last_value (venta_acumulada) over (order by venta_bruta_usd desc range between current row and  unbounded following),2) as pareto
+from stg.ejercicio2clas8
+order by venta_bruta_usd desc
+
+
+--3
+with CTE1 as
+(
+Select extract (year from fecha) anual,  extract (month from fecha) mes , tienda, sum(venta) ventxtiend from stg.order_line_sale
+group by anual, mes, tienda
+order by anual, mes
+),
+CTE2 as
+(
+Select anual, mes, tienda, ventxtiend, lag (ventxtiend) over ( partition by tienda order by mes ) vtamespas from CTE1
+)
+Select anual, mes, tienda, ventxtiend, vtamespas, (round (ventxtiend/vtamespas,4)-1)*100 porccrec from CTE2
+--4
+create table return_movements 
+(orden_venta varchar (255),envio varchar(255), item varchar(255),cantidad integer,id_movimiento integer,desde varchar(255),hasta varchar(255),recibido_por varchar(255),fecha date)
+;
+----------
+select distinct
+	orden_venta,
+	item,
+	cantidad as qty_returned,
+	first_value(desde) over(partition by orden_venta, item order by id_movimiento asc) as primera_locacion, 
+	last_value(hasta) over(partition by orden_venta, item )as ultima_locacion
+from stg.return_movements
+
+
 
 
 
