@@ -212,6 +212,67 @@ select distinct
 	last_value(hasta) over(partition by orden_venta, item )as ultima_locacion
 from stg.return_movements
 
+---5
+CREATE TABLE calendario (
+    fecha DATE,
+    dia_semana VARCHAR(10),
+    dia_mes INTEGER,
+    mes INTEGER,
+    anio INTEGER,
+mes_text VARCHAR(10),
+	is_weekend BOOLEAN
+);
+INSERT INTO calendario (fecha, dia_semana, dia_mes, mes, anio,mes_text)
+SELECT 
+    d::date AS fecha,
+    to_char(d::date, 'Day') AS dia_semana,
+	EXTRACT(day FROM d::date) AS dia_mes,
+    EXTRACT(month FROM d::date) AS mes,
+    EXTRACT(year FROM d::date) AS anio,
+	to_char(d::date, 'Month') AS mes_text
+FROM generate_series(
+    date_trunc('year', now() - interval '365 days'), -- inicio del año actual
+    date_trunc('year', now()) + interval '1 year - 1 day', -- fin del año actual
+    interval '1 day'
+) AS d;
+--Agrego valores is_weekend
+UPDATE calendario
+SET is_weekend = 
+    CASE 
+    	WHEN dia_semana like '%Sunday%' THEN true
+When dia_Semana like '%Saturday%' then true
+        ELSE false
+    END;
+--Agrego columnas
+Alter table Calendario 
+Add column anio_fiscal VARCHAR(10),
+Add column Trimestre_fiscal VARCHAR(10),
+Add column Fecha_anio_ant date
+;
+
+
+--completo anio fiscal
+UPDATE Calendario
+SET anio_fiscal = 
+    CONCAT_WS (' ','FY',date_part ('year',fecha))
+;
+--completo trimester
+UPDATE calendario
+SET trimestre_fiscal = 
+    CASE 
+        WHEN mes between 1 and 3 THEN 'Q1'
+		WHEN mes between 4 and 6 then 'Q2'
+		When mes between 7 and 9 then 'Q3'
+		
+        ELSE 'Q4'
+    END;
+--completo fecha anio anterior
+UPDATE calendario
+SET Fecha_anio_ant  = 
+  fecha - interval '1 year'
+   ;
+
+
 
 
 
