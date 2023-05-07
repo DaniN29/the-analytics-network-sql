@@ -271,7 +271,52 @@ UPDATE calendario
 SET Fecha_anio_ant  = 
   fecha - interval '1 year'
    ;
+--------------
+--9.1 
+with mestienda as (
+ select date_part('month',fecha) as mes, sum (venta), tienda  from stg.order_line_sale
+ group by tienda, mes
+ )
+ 
+ select *, (mestienda2.sum - mestienda.sum) as crecimiento_nominal, round(((mestienda2.sum/mestienda.sum) - 1)*100,2) as crecimiento_porcentaje from mestienda
+ inner join mestienda mestienda2
+ on mestienda.tienda =mestienda2.tienda
+ and mestienda2.mes = mestienda.mes + 1
+--9.2
+Alter table stg.product_master add column marca VARCHAR (100);
+Update stg.product_master set marca = 
+	case 
+		when lower(nombre) like '%samsung%' then 'Samsung'
+		when lower(nombre) like '%philips%' then 'Phillips'
+		when lower(nombre) like '%levi%' then 'Levi''s'
+		when lower(nombre) like '%tommy%' then 'Tommy Hifilgher'
+		when lower(nombre) like '%acer%' then 'Acer'
+		when lower(nombre) like '%jbl%' then 'JBL'	
+		when lower(nombre) like '%motorola%' then 'Motorola'	
+			else 'Unknown'
+		end 
+--9.3
+Create table ejercicio93 (empresa VARCHAR (255),rubro VARCHAR (255),facturacion VARCHAR (100));
+with fact_num as
+(select empresa, lower(rubro) as rubro, replace(facturacion,'$', '') as monto
+from ejercicio93),
+fact_num2 as
+(select *, 
+ cast (left (monto, LENgth(monto)-1) as decimal)  as valor
+ from fact_num),
 
+ fact_num3 as
+ (select rubro, sum(
+  case
+ when right (monto,1) = 'B' then valor * 1000  else valor end) as factotal
+  from fact_num2
+ group by rubro),
+ 
+ fact_num4 as
+ (select rubro, case  when factotal > 999.99 then  cast (round(factotal/1000,2) as VARCHAR) || 'B'  else  cast (factotal as VARCHAR) || 'M'  end
+  from fact_num3)
+ 
+ select * from fact_num4	
 
 
 
